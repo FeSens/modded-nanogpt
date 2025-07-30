@@ -499,6 +499,8 @@ class GPT(nn.Module):
     def weighted_cross_entropy(self, logits: Tensor, target_seq: Tensor, alpha: float = 0.2, normalize="area"):
         batch_size, seq_len, vocab_size = logits.size()
         unreduced_loss = F.cross_entropy(logits.view(-1, vocab_size), target_seq, reduction="none")
+        
+        return unreduced_loss.sum() if self.training else unreduced_loss.mean()
 
         pos_weights = torch.arange(1, seq_len + 1, dtype=torch.float32, device=logits.device).pow(alpha)
         if normalize == "area":
