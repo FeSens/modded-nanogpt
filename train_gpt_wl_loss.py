@@ -500,8 +500,6 @@ class GPT(nn.Module):
         batch_size, seq_len, vocab_size = logits.size()
         unreduced_loss = F.cross_entropy(logits.view(-1, vocab_size), target_seq, reduction="none")
         
-        return unreduced_loss.sum() if self.training else unreduced_loss.mean()
-
         pos_weights = torch.arange(1, seq_len + 1, dtype=torch.float32, device=logits.device).pow(alpha)
         if normalize == "area":
             pos_weights = pos_weights / pos_weights.mean()
