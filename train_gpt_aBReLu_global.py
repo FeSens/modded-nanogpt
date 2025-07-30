@@ -658,12 +658,16 @@ embed_params = [p for n, p in model.named_parameters() if "embed" in n]
 scalar_params = [p for p in model.parameters() if p.ndim < 2]
 head_params = [model.lm_head.weight]
 
+true_scalar_params = [p for p in scalar_params if p.dim() == 0]
+vector_params = [p for p in scalar_params if p.dim() > 0]
+
 # init the optimizer(s)
 # small adam epsilon by @YouJiacheng. this is an alternate method of fixing the world_size dependence
 # discovered by @fernbear.bsky.social https://x.com/hi_tysam/status/1879692937589875094
-optimizer1 = DistAdam(scalar_params + head_params + embed_params, lr=0.008, betas=(0.8, 0.95), eps=1e-10, weight_decay=0.0)
+optimizer1 = DistAdam(vector_params + head_params + embed_params, lr=0.008, betas=(0.8, 0.95), eps=1e-10, weight_decay=0.0)
+optimizer_scalar = torch.optim.Adam(true_scalar_params, lr=0.008, betas=(0.8, 0.95), eps=1e-10, weight_decay=0.0)
 optimizer2 = Muon(hidden_matrix_params, lr=0.05, momentum=0.95, weight_decay=0.0)
-optimizers = [optimizer1, optimizer2]
+optimizers = [optimizer1, optimizer_scalar, optimizer2]
 for opt in optimizers:
     for group in opt.param_groups:
         group["initial_lr"] = group["lr"]
@@ -704,6 +708,9 @@ train_loader = distributed_data_generator(args.train_files, world_size * args.tr
 for _ in range(warmup_steps):
     inputs, targets = next(train_loader)
     model(inputs, targets, get_window_size_blocks(1)).backward()
+    for p in true_scalar_params:
+        if p.grad is not None:
+            dist.all_reduce(p.grad, op=dist.ReduceOp.AVG)
     for opt in optimizers:
         opt.step()
     model.zero_grad(set_to_none=True)
@@ -761,6 +768,9 @@ for step in range(train_steps + 1):
     # --------------- TRAINING SECTION -----------------
     inputs, targets = next(train_loader)
     model(inputs, targets, get_window_size_blocks(step)).backward()
+    for p in true_scalar_params:
+        if p.grad is not None:
+            dist.all_reduce(p.grad, op=dist.ReduceOp.AVG)
     # set optimization hyperparameters
     for opt in optimizers:
         for group in opt.param_groups:
