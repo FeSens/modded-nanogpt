@@ -358,8 +358,9 @@ class CausalSelfAttention(nn.Module):
 class aBReLU(nn.Module):
     def __init__(self, alpha: float = 2, beta: float = 0.1):
         super().__init__()
-        self.alpha = nn.Parameter(torch.tensor(alpha))
-        self.beta = nn.Parameter(torch.tensor(beta))
+        # Ensure parameters are floating point tensors so they can receive gradients
+        self.alpha = nn.Parameter(torch.tensor(float(alpha), dtype=torch.float32))
+        self.beta = nn.Parameter(torch.tensor(float(beta), dtype=torch.float32))
     
     def forward(self, x: Tensor):
         # Leaky aBReLU: positive part is powered by alpha, negative part scaled by beta

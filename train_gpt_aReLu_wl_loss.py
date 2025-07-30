@@ -358,7 +358,8 @@ class CausalSelfAttention(nn.Module):
 class aReLU(nn.Module):
     def __init__(self, alpha: float = 2):
         super().__init__()
-        self.alpha = nn.Parameter(torch.tensor(alpha))
+        # Ensure parameter is a floating point tensor so it can receive gradients
+        self.alpha = nn.Parameter(torch.tensor(float(alpha), dtype=torch.float32))
     
     def forward(self, x: Tensor):
         return F.relu(x).pow(self.alpha)

@@ -407,8 +407,9 @@ class GPT(nn.Module):
         super().__init__()
         vocab_size = next_multiple_of_n(vocab_size, n=128)
         self.embed = nn.Embedding(vocab_size, model_dim)
-        self.alpha = nn.Parameter(torch.tensor(2))
-        self.beta = nn.Parameter(torch.tensor(0.1))
+        # Ensure parameters are floating point tensors so they can receive gradients
+        self.alpha = nn.Parameter(torch.tensor(2.0, dtype=torch.float32))
+        self.beta = nn.Parameter(torch.tensor(0.1, dtype=torch.float32))
         # token value embeddings by @KoszarskyB - inspired by @Grad62304977's value residual implementation following https://arxiv.org/abs/2410.17897
         # value embedding code simplification inspired by @ragulpr https://github.com/KellerJordan/modded-nanogpt/pull/78
         self.value_embeds = nn.ModuleList([nn.Embedding(vocab_size, model_dim) for _ in range(3)])
